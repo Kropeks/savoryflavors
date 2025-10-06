@@ -271,6 +271,15 @@ export default function Header() {
             </button>
           )}
 
+          {/* Subscribe Button */}
+          <Link
+            href="/subscribe"
+            className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-md bg-olive-600 hover:bg-olive-700 text-white text-sm font-medium transition-colors"
+          >
+            <Crown className="w-4 h-4" />
+            Subscribe
+          </Link>
+
           {/* Mobile Menu Button */}
           <button
             className="p-2 rounded-full md:hidden hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"

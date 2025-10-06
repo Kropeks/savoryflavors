@@ -2,42 +2,50 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Loader2, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import Button from '@/components/ui/button';
+import { Loader2, AlertCircle } from 'lucide-react';
 import PricingFormModal from '@/components/subscription/PricingFormModal';
-import { checkSubscription } from './actions/subscription';
 
 export default function SubscribePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(true);
-  const [session, setSession] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('monthly');
   const [error, setError] = useState('');
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
 
   // Check authentication and subscription status
   useEffect(() => {
-    const checkAuthAndSubscription = async () => {
-      try {
-        const result = await checkSubscription();
-        
-        if (result.status === 'unauthenticated') {
-          router.push(`/login?callbackUrl=${encodeURIComponent('/subscribe')}`);
-          return;
-        }
+    const checkAuth = async () => {
+      if (status === 'loading') {
+        return;
+      }
 
-        if (result.isActive) {
-          router.push('/dashboard?message=You already have an active subscription');
-          return;
-        }
-        
+      if (status === 'unauthenticated') {
+        router.push(`/login?callbackUrl=${encodeURIComponent('/subscribe')}`);
+        return;
+      }
+
+      try {
         // Check for plan in URL params
         const plan = searchParams.get('plan');
         if (plan === 'yearly') {
           setSelectedPlan('yearly');
         }
-        
+
+        // Check if user already has an active subscription
+        const res = await fetch('/api/user/subscription');
+        const data = await res.json();
+
+        if (data.status === 'active') {
+          setHasActiveSubscription(true);
+          setInfoMessage('You already have an active subscription. Enjoy all premium benefits!');
+          return;
+        }
       } catch (err) {
         console.error('Error checking subscription:', err);
         setError('Failed to check subscription status');
@@ -45,11 +53,16 @@ export default function SubscribePage() {
         setIsLoading(false);
       }
     };
-    
-    checkAuthAndSubscription();
-  }, [router, searchParams]);
+
+    checkAuth();
+  }, [router, searchParams, status]);
 
   const handlePlanSelect = (plan) => {
+    if (hasActiveSubscription) {
+      setInfoMessage('You already have an active subscription. No further action is required.');
+      return;
+    }
+
     setSelectedPlan(plan);
     setShowModal(true);
   };
@@ -99,6 +112,11 @@ export default function SubscribePage() {
           <p className="mt-3 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-300 sm:mt-4">
             Select the plan that works best for you and start cooking smarter with FitSavory Premium
           </p>
+          {infoMessage && (
+            <div className="mt-6 mx-auto max-w-2xl rounded-md border border-olive-200 bg-olive-50 px-4 py-3 text-sm text-olive-800 dark:border-olive-800/40 dark:bg-olive-900/20 dark:text-olive-200">
+              {infoMessage}
+            </div>
+          )}
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -185,6 +203,7 @@ export default function SubscribePage() {
             <Button
               onClick={() => handlePlanSelect('monthly')}
               className="mt-8 w-full justify-center bg-olive-600 hover:bg-olive-700 text-white"
+              disabled={hasActiveSubscription}
             >
               Get Started
             </Button>
@@ -238,6 +257,7 @@ export default function SubscribePage() {
             <Button
               onClick={() => handlePlanSelect('yearly')}
               className="mt-8 w-full justify-center bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white"
+              disabled={hasActiveSubscription}
             >
               Get Best Value
             </Button>

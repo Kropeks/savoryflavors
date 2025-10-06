@@ -32,12 +32,9 @@ export default function Home() {
   // Handle redirections based on auth status and role
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/auth/login');
-    } else if (status === 'authenticated') {
-      // Redirect authenticated users to the home page
-      router.push('/');
+      router.replace('/auth/login');
     }
-  }, [status, router, session]);
+  }, [status, router]);
 
   // Show loading state
   if (status === 'loading' || status === 'unauthenticated') {

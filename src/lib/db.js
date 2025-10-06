@@ -1,33 +1,23 @@
 import mysql from 'mysql2/promise';
 
-if (!process.env.DB_HOST) {
-  throw new Error('DB_HOST is not defined in environment variables');
-}
-
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'savoryflavors',
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
-});
-
-export const query = async (sql, params = []) => {
-  if (typeof window !== 'undefined') {
-    throw new Error('Database operations can only be performed on the server side');
-  }
-
-  const connection = await pool.getConnection();
-  try {
-    const [results] = await connection.execute(sql, params);
-    return results;
-  } finally {
-    connection.release();
-  }
+  queueLimit: 0,
+  multipleStatements: true,
+  // Add timeout settings
+  acquireTimeout: 60000,
+  timeout: 60000,
+  reconnect: true,
 };
+console.log('🔧 Active DB config:', dbConfig)
+// Create connection pool
+const pool = mysql.createPool(dbConfig);
 
 // Test database connection
 const testConnection = async () => {
@@ -35,7 +25,7 @@ const testConnection = async () => {
   try {
     connection = await pool.getConnection();
     console.log('✅ Database connected successfully!');
-    console.log(`📊 Connected to database: ${process.env.DB_NAME}`);
+    console.log(`📊 Connected to database: ${dbConfig.database}`);
     return true;
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);

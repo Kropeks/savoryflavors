@@ -1,10 +1,8 @@
-'use server';
-
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { getMockSession } from './lib/auth-utils';
-import { query } from './lib/db';
+import { queryOne } from './lib/db';
 
 // Check if authentication is disabled
 const isAuthDisabled = process.env.DISABLE_AUTH === 'true';
@@ -61,39 +59,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } catch (error) {
           console.error('Authentication error:', error);
           throw new Error(error.message || 'An error occurred during authentication');
+        }
       },
     }),
   ],
   callbacks: {
     async session({ session, token }) {
+      if (isAuthDisabled) {
+        return session;
+      }
+      
       if (token) {
-        session.user.id = token.id;
-        session.user.name = token.name;
-        session.user.email = token.email;
-        session.user.image = token.picture;
-        session.user.role = token.role || 'user';
-        
-        // Add subscription status to session
-        if (token.id && !isAuthDisabled) {
-          try {
-            const [subscription] = await query(
-              'SELECT status FROM subscriptions WHERE user_id = ? AND status = ?',
-              [token.id, 'active']
-            );
-            session.user.subscription = subscription ? { status: 'active' } : { status: 'inactive' };
-          } catch (error) {
-            console.error('Error fetching subscription status:', error);
-            session.user.subscription = { status: 'error' };
-          }
-        } else if (isAuthDisabled) {
-          session.user.subscription = { status: 'active' }; // Mock subscription for development
-        }
+        session.user.id = token.sub;
+        session.user.role = token.role;
       }
       return session;
     },
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
         token.role = user.role;
       }
       return token;

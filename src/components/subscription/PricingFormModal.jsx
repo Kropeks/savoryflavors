@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Loader2, CheckCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
 
@@ -13,28 +13,12 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
   const [paymentError, setPaymentError] = useState('');
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [clientSecret, setClientSecret] = useState('');
-  const [paymentIntentId, setPaymentIntentId] = useState('');
-  const [redirectUrl, setRedirectUrl] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpMonth, setCardExpMonth] = useState('');
+  const [cardExpYear, setCardExpYear] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
   const router = useRouter();
   
-  // Load PayMongo script
-  useEffect(() => {
-    if (isOpen && !window.PayMongo) {
-      const script = document.createElement('script');
-      script.src = 'https://js.paymongo.com/v1/paymongo.js';
-      script.async = true;
-      script.onload = () => {
-        window.PayMongo.init(process.env.NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY);
-      };
-      document.body.appendChild(script);
-      
-      return () => {
-        document.body.removeChild(script);
-      };
-    }
-  }, [isOpen]);
-
   const plans = {
     monthly: {
       name: 'Premium Monthly',
@@ -83,56 +67,66 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
           planId: selectedPlan === 'monthly' ? 'premium_monthly' : 'premium_yearly',
           paymentMethod: paymentMethod,
           billingCycle: selectedPlan === 'monthly' ? 'month' : 'year',
+          cardDetails: paymentMethod === 'card' ? {
+            cardNumber,
+            expMonth: cardExpMonth,
+            expYear: cardExpYear,
+            cvc: cardCvc,
+            billing: {
+              name: `${e.target.firstName?.value || ''} ${e.target.lastName?.value || ''}`.trim() || undefined,
+              email: e.target.email?.value || undefined,
+              phone: e.target.phone?.value || undefined,
+              address: {
+                country: e.target.country?.value || undefined,
+              },
+            },
+          } : undefined,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to process payment');
+        const friendlyMessage = data.message?.includes('ECONNREFUSED')
+          ? 'Payment failed because the database is unavailable. Please start MySQL and try again.'
+          : data.message;
+        throw new Error(friendlyMessage || 'Failed to process payment');
       }
 
       if (paymentMethod === 'gcash') {
-        // For GCash, redirect to the payment page
         if (data.requiresAction && data.redirectUrl) {
           window.location.href = data.redirectUrl;
         }
         return;
       }
 
-      // For card payments, use PayMongo Elements
-      if (window.PayMongo && data.clientSecret) {
-        setClientSecret(data.clientSecret);
-        setPaymentIntentId(data.paymentIntentId);
-        
-        const card = window.PayMongo.elements().create('card');
-        card.mount('#card-element');
-        
-        const { error, paymentIntent } = await window.PayMongo.confirmPayment({
-          clientSecret: data.clientSecret,
-          elements: { card },
-          confirmParams: {
-            return_url: `${window.location.origin}/subscription/success`,
-          },
-          redirect: 'if_required',
-        });
-
-        if (error) {
-          throw new Error(error.message || 'Payment failed');
+      if (paymentMethod === 'card') {
+        if (!cardNumber || !cardExpMonth || !cardExpYear || !cardCvc) {
+          throw new Error('Please provide complete card details.');
         }
 
-        if (paymentIntent.status === 'succeeded') {
+        if (data.requiresAction && data.redirectUrl) {
+          window.location.href = data.redirectUrl;
+          return;
+        }
+        if (data.success) {
           setPaymentSuccess(true);
-          // Redirect to success page after a short delay
           setTimeout(() => {
-            router.push('/subscription/success');
+            router.push('/');
             onClose();
           }, 2000);
+          return;
         }
+        throw new Error(data.message || 'Unable to complete card payment.');
       }
     } catch (error) {
       console.error('Payment error:', error);
       setPaymentError(error.message || 'Payment failed. Please try again.');
+      if (error.message?.includes('database is unavailable')) {
+        setPaymentError(
+          'We could not reach the database. Please verify MySQL is running on localhost:3306 and refresh before retrying.'
+        );
+      }
     } finally {
       setPaymentProcessing(false);
     }
@@ -141,28 +135,23 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
   const handlePaymentMethodChange = (method) => {
     setPaymentMethod(method);
     setPaymentError('');
+    if (method === 'gcash') {
+      setCardNumber('');
+      setCardExpMonth('');
+      setCardExpYear('');
+      setCardCvc('');
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden">
+      <DialogContent className="max-w-5xl w-full p-0 overflow-hidden md:min-h-[70vh]">
         <div className="relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4 z-10 rounded-full"
-            onClick={onClose}
-            disabled={isSubmitting}
-          >
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
-          </Button>
-
-          <div className="grid grid-cols-1 md:grid-cols-2">
+          <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] md:min-h-[70vh]">
             {/* Left side - Form */}
-            <div className="p-6 sm:p-8">
+            <div className="p-6 sm:p-6 md:p-7 overflow-y-auto max-h-[85vh]">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
                   Upgrade to Premium
@@ -172,9 +161,9 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
                 </p>
               </DialogHeader>
 
-              <form onSubmit={handlePayment} className="mt-6 space-y-6">
+              <form onSubmit={handlePayment} className="mt-6 space-y-5">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <input
                         type="text"
@@ -208,7 +197,7 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <select
                         id="country"
@@ -285,9 +274,88 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
                     </div>
                     
                     {paymentMethod === 'card' && (
-                      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
-                        <div id="card-element" className="p-2 border border-gray-300 dark:border-gray-600 rounded-md"></div>
-                        <div id="card-errors" role="alert" className="text-red-500 text-sm mt-2"></div>
+                      <div className="mt-4 space-y-4">
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Card Number
+                            </label>
+                            <input
+                              id="cardNumber"
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="cc-number"
+                              placeholder="4311 5188 0466 1120"
+                              value={cardNumber.replace(/(\d{4})(?=\d)/g, '$1 ').trim()}
+                              onChange={(e) => {
+                                const rawDigits = e.target.value.replace(/[^0-9]/g, '');
+                                setCardNumber(rawDigits.slice(0, 19));
+                              }}
+                              maxLength={23}
+                              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+                              required
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label htmlFor="cardExpMonth" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Expiry Month
+                              </label>
+                              <input
+                                id="cardExpMonth"
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="cc-exp-month"
+                                placeholder="MM"
+                                maxLength={2}
+                                value={cardExpMonth}
+                                onChange={(e) => setCardExpMonth(e.target.value.replace(/[^0-9]/g, ''))}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="cardExpYear" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Expiry Year
+                              </label>
+                              <input
+                                id="cardExpYear"
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="cc-exp-year"
+                                placeholder="YY"
+                                maxLength={4}
+                                value={cardExpYear}
+                                onChange={(e) => setCardExpYear(e.target.value.replace(/[^0-9]/g, ''))}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+                                required
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label htmlFor="cardCvc" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              CVC
+                            </label>
+                            <input
+                              id="cardCvc"
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="cc-csc"
+                              placeholder="123"
+                              maxLength={4}
+                              value={cardCvc}
+                              onChange={(e) => setCardCvc(e.target.value.replace(/[^0-9]/g, ''))}
+                              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                          <p className="font-medium">Use a PayMongo sandbox test card:</p>
+                          <p>Visa 3DS: <code>4311 5188 0466 1120</code> · Exp <code>12/34</code> · CVC <code>123</code></p>
+                          <p>Mastercard 3DS: <code>5200 8282 8282 8210</code> · Exp <code>12/34</code> · CVC <code>123</code></p>
+                          <p>Visa non-3DS: <code>4000 0025 0000 3155</code> · Exp <code>12/34</code> · CVC <code>123</code></p>
+                        </div>
                       </div>
                     )}
                     
@@ -341,7 +409,7 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
             </div>
 
             {/* Right side - Plan details */}
-            <div className="bg-gray-50 dark:bg-gray-800 p-6 sm:p-8 border-l border-gray-200 dark:border-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 sm:p-7 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 overflow-y-auto max-h-[85vh]">
               <div className="sticky top-8">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Plan Details</h3>
                 

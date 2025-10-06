@@ -1,6 +1,23 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { query } from '@/lib/db';
+import { activateSubscription } from './subscription-utils';
+
+const PAYMONGO_SANDBOX_CARD_ALIASES = {
+  // Stripe-style test cards → PayMongo sandbox equivalents
+  '4242424242424242': '4311518804661120',
+  '4111111111111111': '4311518804661120',
+  '5555555555554444': '5200828282828210',
+  '378282246310005': '4000002500003155',
+};
+
+const PAYMONGO_ALLOWED_TEST_CARDS = new Set([
+  '4311518804661120', // Visa 3DS
+  '5200828282828210', // Mastercard 3DS
+  '4000002500003155', // Visa non-3DS
+  '5123450000000008', // Mastercard non-3DS (from PayMongo docs)
+  '4222222222222', // Visa 13-digit legacy test
+]);
 
 export async function POST(req) {
   const session = await auth();
@@ -13,13 +30,48 @@ export async function POST(req) {
   }
 
   try {
-    const { amount, planId, paymentMethod, billingCycle } = await req.json();
-    
-    // Get plan details
-    const [plan] = await query(
-      'SELECT * FROM subscription_plans WHERE id = ?',
-      [planId]
-    );
+    const { amount, planId, paymentMethod, billingCycle, cardDetails } = await req.json();
+
+    // Determine lookup strategy for plan
+    let plan = null;
+
+    if (Number.isInteger(planId) || (typeof planId === 'string' && /^\d+$/.test(planId))) {
+      const [planById] = await query(
+        'SELECT * FROM subscription_plans WHERE id = ?',
+        [planId]
+      );
+      plan = planById;
+    }
+
+    if (!plan) {
+      let planName = null;
+      let planBillingCycle = billingCycle;
+
+      switch (planId) {
+        case 'premium_monthly':
+          planName = 'Premium';
+          planBillingCycle = 'monthly';
+          break;
+        case 'premium_yearly':
+          planName = 'Premium';
+          planBillingCycle = 'yearly';
+          break;
+        case 'basic':
+          planName = 'Basic';
+          planBillingCycle = 'monthly';
+          break;
+        default:
+          planName = typeof planId === 'string' ? planId : null;
+      }
+
+      if (planName) {
+        const [planByName] = await query(
+          'SELECT * FROM subscription_plans WHERE name = ? AND billing_cycle = ?',
+          [planName, planBillingCycle]
+        );
+        plan = planByName;
+      }
+    }
 
     if (!plan) {
       return NextResponse.json(
@@ -32,6 +84,246 @@ export async function POST(req) {
     const paymongoSecretKey = process.env.PAYMONGO_SECRET_KEY;
     const authString = Buffer.from(`${paymongoSecretKey}:`).toString('base64');
 
+    const amountInCentavos = Math.round(amount * 100);
+
+    if (paymentMethod === 'card') {
+      if (!cardDetails?.cardNumber || !cardDetails?.expMonth || !cardDetails?.expYear || !cardDetails?.cvc) {
+        return NextResponse.json(
+          { success: false, message: 'Incomplete card details provided.' },
+          { status: 400 }
+        );
+      }
+
+      const normalizedCardNumber = cardDetails.cardNumber.replace(/\D+/g, '');
+      const mappedCardNumber = PAYMONGO_SANDBOX_CARD_ALIASES[normalizedCardNumber] || normalizedCardNumber;
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.info('[PayMongo] Card mapping', {
+          originalInput: cardDetails.cardNumber,
+          normalizedCardNumber,
+          mappedCardNumber,
+          aliasApplied: mappedCardNumber !== normalizedCardNumber,
+        });
+      }
+      const expMonth = parseInt(cardDetails.expMonth, 10);
+      const expYearRaw = cardDetails.expYear.trim();
+      const expYear = expYearRaw.length === 2 ? parseInt(`20${expYearRaw}`, 10) : parseInt(expYearRaw, 10);
+      const normalizedCvc = cardDetails.cvc.replace(/\D+/g, '');
+      const expMonthString = String(expMonth).padStart(2, '0');
+      const expYearString = String(expYear);
+
+      if (!Number.isInteger(expMonth) || !Number.isInteger(expYear)) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid card expiration date.' },
+          { status: 400 }
+        );
+      }
+
+      if (expMonth < 1 || expMonth > 12) {
+        return NextResponse.json(
+          { success: false, message: 'Card expiration month must be between 01 and 12.' },
+          { status: 400 }
+        );
+      }
+
+      const currentYear = new Date().getFullYear();
+      if (expYear < currentYear || expYear > currentYear + 20) {
+        return NextResponse.json(
+          { success: false, message: 'Card expiration year is invalid.' },
+          { status: 400 }
+        );
+      }
+
+      if (!/^[0-9]{12,19}$/.test(mappedCardNumber)) {
+        return NextResponse.json(
+          { success: false, message: 'Card number must contain 12 to 19 digits.' },
+          { status: 400 }
+        );
+      }
+
+      if (!PAYMONGO_ALLOWED_TEST_CARDS.has(mappedCardNumber)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              'For testing, please use PayMongo sandbox cards such as 4311 5188 0466 1120 (Visa 3DS), 5200 8282 8282 8210 (Mastercard 3DS), or 4000 0025 0000 3155 (Visa non-3DS).',
+          },
+          { status: 400 }
+        );
+      }
+
+      if (!/^[0-9]{3,4}$/.test(normalizedCvc)) {
+        return NextResponse.json(
+          { success: false, message: 'CVC must contain 3 or 4 digits.' },
+          { status: 400 }
+        );
+      }
+
+      // Create payment intent for the card
+      const cardIntentResponse = await fetch('https://api.paymongo.com/v1/payment_intents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${authString}`,
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              amount: amountInCentavos,
+              payment_method_allowed: ['card'],
+              payment_method_options: {
+                card: {
+                  request_three_d_secure: 'any',
+                },
+              },
+              currency: 'PHP',
+              description: `Subscription: ${plan.name} (${billingCycle})`,
+              metadata: {
+                userId: String(session.user.id),
+                planId: String(plan.id),
+                planName: plan.name,
+                billingCycle,
+                paymentMethod,
+                originalCardNumber: normalizedCardNumber,
+              },
+            },
+          },
+        }),
+      });
+
+      const cardIntentData = await cardIntentResponse.json();
+
+      if (!cardIntentResponse.ok) {
+        console.error('PayMongo card intent error:', cardIntentData);
+        const errorDetail = cardIntentData?.errors?.[0]?.detail || cardIntentData?.message || 'Failed to create payment intent';
+        return NextResponse.json(
+          {
+            success: false,
+            message: errorDetail,
+            error: process.env.NODE_ENV === 'development' ? cardIntentData : undefined,
+          },
+          { status: cardIntentResponse.status || 500 }
+        );
+      }
+
+      const paymentIntentId = cardIntentData.data.id;
+
+      // Create card payment method
+      const cardPaymentMethodResponse = await fetch('https://api.paymongo.com/v1/payment_methods', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${authString}`,
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              type: 'card',
+              details: {
+                card_number: String(mappedCardNumber),
+                exp_month: expMonthString,
+                exp_year: expYearString,
+                cvc: normalizedCvc,
+              },
+              billing: cardDetails.billing ? cardDetails.billing : undefined,
+              metadata: {
+                userId: String(session.user.id),
+                planId: String(plan.id),
+                planName: plan.name,
+                billingCycle,
+                paymentMethod: 'card',
+                originalCardNumber: normalizedCardNumber,
+              },
+            },
+          },
+        }),
+      });
+      const cardPaymentMethodData = await cardPaymentMethodResponse.json();
+
+      if (!cardPaymentMethodResponse.ok) {
+        console.error('PayMongo card payment method error:', cardPaymentMethodData);
+        const errorDetail = cardPaymentMethodData?.errors?.[0]?.detail || cardPaymentMethodData?.message || 'Failed to create card payment method';
+        return NextResponse.json(
+          {
+            success: false,
+            message: errorDetail,
+            error: process.env.NODE_ENV === 'development' ? cardPaymentMethodData : undefined,
+          },
+          { status: cardPaymentMethodResponse.status || 500 }
+        );
+      }
+
+      const cardPaymentMethodId = cardPaymentMethodData.data.id;
+
+      // Attach card payment method to intent
+      const cardAttachResponse = await fetch(`https://api.paymongo.com/v1/payment_intents/${paymentIntentId}/attach`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${authString}`,
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              payment_method: cardPaymentMethodId,
+              return_url: `${process.env.NEXTAUTH_URL}/subscription/success`,
+            },
+          },
+        }),
+      });
+
+      const cardAttachData = await cardAttachResponse.json();
+
+      if (!cardAttachResponse.ok) {
+        console.error('PayMongo card attach error:', cardAttachData);
+        const errorDetail = cardAttachData?.errors?.[0]?.detail || cardAttachData?.message || 'Failed to attach card payment method';
+        return NextResponse.json(
+          {
+            success: false,
+            message: errorDetail,
+            error: process.env.NODE_ENV === 'development' ? cardAttachData : undefined,
+          },
+          { status: cardAttachResponse.status || 500 }
+        );
+      }
+
+      const cardNextAction = cardAttachData?.data?.attributes?.next_action;
+      const cardStatus = cardAttachData?.data?.attributes?.status;
+
+      if (cardNextAction?.redirect?.url) {
+        return NextResponse.json({
+          success: true,
+          requiresAction: true,
+          redirectUrl: cardNextAction.redirect.url,
+          paymentIntentId,
+        });
+      }
+
+      if (cardStatus === 'succeeded') {
+        await activateSubscription({
+          userId: session.user.id,
+          planId: plan.id,
+          billingCycle,
+          amountCentavos: amountInCentavos,
+          paymentIntentId,
+          paymentMethod: 'card',
+        });
+
+        return NextResponse.json({
+          success: true,
+          paymentIntentId,
+        });
+      }
+
+      return NextResponse.json({
+        success: false,
+        message: 'Card payment could not be completed. Please try another method.',
+        status: cardStatus,
+      }, { status: 400 });
+    }
+
+    const paymentMethodAllowed = ['gcash'];
+
     // Create a payment intent
     const paymentIntentResponse = await fetch('https://api.paymongo.com/v1/payment_intents', {
       method: 'POST',
@@ -42,19 +334,16 @@ export async function POST(req) {
       body: JSON.stringify({
         data: {
           attributes: {
-            amount: amount * 100, // Convert to centavos
-            payment_method_allowed: [paymentMethod],
-            payment_method_options: {
-              card: {
-                request_three_d_secure: 'any'
-              }
-            },
+            amount: amountInCentavos,
+            payment_method_allowed: paymentMethodAllowed,
             currency: 'PHP',
             description: `Subscription: ${plan.name} (${billingCycle})`,
             metadata: {
-              userId: session.user.id,
-              planId: plan.id,
+              userId: String(session.user.id),
+              planId: String(plan.id),
+              planName: plan.name,
               billingCycle,
+              paymentMethod,
             }
           }
         }
@@ -65,7 +354,15 @@ export async function POST(req) {
 
     if (!paymentIntentResponse.ok) {
       console.error('PayMongo error:', paymentIntentData);
-      throw new Error('Failed to create payment intent');
+      const errorDetail = paymentIntentData?.errors?.[0]?.detail || paymentIntentData?.message || 'Failed to create payment intent';
+      return NextResponse.json(
+        {
+          success: false,
+          message: errorDetail,
+          error: process.env.NODE_ENV === 'development' ? paymentIntentData : undefined,
+        },
+        { status: paymentIntentResponse.status || 500 }
+      );
     }
 
     // For GCash, we need to create a payment method and attach it
@@ -80,7 +377,7 @@ export async function POST(req) {
           data: {
             attributes: {
               type: 'gcash',
-              amount: amount * 100,
+              amount: amountInCentavos,
               currency: 'PHP',
               description: `Subscription: ${plan.name} (${billingCycle})`,
             }
@@ -92,7 +389,15 @@ export async function POST(req) {
       
       if (!paymentMethodResponse.ok) {
         console.error('PayMongo GCash error:', paymentMethodData);
-        throw new Error('Failed to create GCash payment method');
+        const errorDetail = paymentMethodData?.errors?.[0]?.detail || paymentMethodData?.message || 'Failed to create GCash payment method';
+        return NextResponse.json(
+          {
+            success: false,
+            message: errorDetail,
+            error: process.env.NODE_ENV === 'development' ? paymentMethodData : undefined,
+          },
+          { status: paymentMethodResponse.status || 500 }
+        );
       }
 
       // Attach payment method to payment intent
@@ -116,7 +421,15 @@ export async function POST(req) {
 
       if (!attachResponse.ok) {
         console.error('PayMongo attach error:', attachData);
-        throw new Error('Failed to attach payment method');
+        const errorDetail = attachData?.errors?.[0]?.detail || attachData?.message || 'Failed to attach payment method';
+        return NextResponse.json(
+          {
+            success: false,
+            message: errorDetail,
+            error: process.env.NODE_ENV === 'development' ? attachData : undefined,
+          },
+          { status: attachResponse.status || 500 }
+        );
       }
 
       // Return the GCash redirect URL
