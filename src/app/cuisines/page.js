@@ -1,16 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Globe, ChefHat, Clock, Users, Star, ArrowRight, Utensils } from 'lucide-react'
+import { Globe, ChefHat, Clock, Users, Star, ArrowRight, Utensils } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
 export default function Cuisines() {
   const [cuisines, setCuisines] = useState([])
-  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('')
   const [featuredCuisinesCounts, setFeaturedCuisinesCounts] = useState({})
   const [allCuisinesCounts, setAllCuisinesCounts] = useState({})
   const [countsLoading, setCountsLoading] = useState(false)
@@ -130,22 +127,10 @@ export default function Cuisines() {
         console.warn('MealDB API failed, using fallback data')
         setCuisines(getMockCuisines())
       }
-
-      // Fetch categories for additional filtering
-      const categoriesResponse = await fetch('/api/mealdb?type=categories')
-      if (categoriesResponse.ok) {
-        const categoriesData = await categoriesResponse.json()
-        setCategories(categoriesData)
-      } else {
-        // Fallback to mock data
-        console.warn('Categories API failed, using fallback data')
-        setCategories(getMockCategories())
-      }
     } catch (error) {
       console.error('Error fetching cuisines data:', error)
       // Use fallback data on any error
       setCuisines(getMockCuisines())
-      setCategories(getMockCategories())
     } finally {
       setLoading(false)
     }
@@ -304,60 +289,47 @@ export default function Cuisines() {
     ]
   }
 
-  // Mock categories data as fallback
-  const getMockCategories = () => {
-    return [
-      { idCategory: 'Beef', strCategory: 'Beef' },
-      { idCategory: 'Chicken', strCategory: 'Chicken' },
-      { idCategory: 'Seafood', strCategory: 'Seafood' },
-      { idCategory: 'Vegetarian', strCategory: 'Vegetarian' },
-      { idCategory: 'Dessert', strCategory: 'Dessert' },
-      { idCategory: 'Pasta', strCategory: 'Pasta' }
-    ]
-  }
-
-  const filteredCuisines = cuisines.filter(cuisine =>
-    cuisine.strArea.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
   // Legacy helper replaced with image-based flags (kept if needed elsewhere)
   const getCuisineFlag = (cuisineName) => getCuisineFlagImage(cuisineName) || '🌍'
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-20 flex items-center justify-center">
+      <div className="min-h-screen pt-20 flex items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-olive-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading cuisines...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading cuisines...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen pt-20 bg-gray-50">
+    <div className="min-h-screen pt-20 bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">World Cuisines</h1>
-          <p className="text-lg text-gray-600">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">World Cuisines</h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300">
             Explore authentic recipes from around the globe
           </p>
         </div>
 
         {/* Featured Cuisines */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Featured Cuisines</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Featured Cuisines</h2>
           {countsLoading && (
-            <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center justify-center mb-6 text-gray-600 dark:text-gray-300">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-olive-600 mr-2"></div>
-              <span className="text-gray-600">Loading recipe counts...</span>
+              <span className="text-gray-600 dark:text-gray-300">Loading recipe counts...</span>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {featuredCuisines.map((cuisine) => (
-              <div key={cuisine.name} className={`bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow border-2 ${cuisine.color}`}>
-                <div className="relative w-full h-48 bg-gray-200 flex items-center justify-center">
+              <div
+                key={cuisine.name}
+                className={`bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow border-2 dark:border-gray-700 ${cuisine.color}`}
+              >
+                <div className="relative w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                   <Image
                     src={getCuisineImage(cuisine.name)}
                     alt={`${cuisine.name} cuisine`}
@@ -371,21 +343,23 @@ export default function Cuisines() {
                       <Image src={getCuisineFlagImage(cuisine.name)} alt={`${cuisine.name} flag`} width={36} height={24} className="rounded shadow-sm" />
                     </div>
                   )}
-                  <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-medium text-gray-900 shadow-lg ${cuisine.color.replace('bg-', 'bg-').replace('border-', '')}`}>
+                  <div
+                    className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-medium text-gray-900 dark:text-gray-100 shadow-lg ${cuisine.color.replace('bg-', 'bg-').replace('border-', '')} dark:bg-gray-900/70`}
+                  >
                     {cuisine.recipeCount}
                   </div>
                 </div>
 
                 <div className="p-6">
-                  <h3 className={`text-xl font-bold mb-2 ${cuisine.textColor}`}>
+                  <h3 className={`text-xl font-bold mb-2 ${cuisine.textColor} dark:text-gray-100`}>
                     {cuisine.name} Cuisine
                   </h3>
-                  <p className="text-gray-600 text-sm mb-4">
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
                     {cuisine.description}
                   </p>
                   <Link
                     href={`/recipes?cuisine=${encodeURIComponent(cuisine.name)}&source=all`}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${cuisine.color} hover:opacity-90 text-white font-medium`}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${cuisine.color} hover:opacity-90 text-white font-medium dark:bg-olive-600 dark:hover:bg-olive-500 dark:border-none`}
                   >
                     <ChefHat className="h-4 w-4" />
                     Explore Recipes
@@ -397,89 +371,41 @@ export default function Cuisines() {
           </div>
         </div>
 
-        {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input
-                type="text"
-                placeholder="Search cuisines..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="filter-input px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent"
-            >
-              <option value="">All Categories</option>
-              {categories.map((category) => (
-                <option key={category.idCategory} value={category.strCategory}>
-                  {category.strCategory}
-                </option>
-              ))}
-            </select>
-
-            {/* Clear Filters */}
-            <button
-              onClick={() => {
-                setSearchTerm('')
-                setSelectedCategory('')
-              }}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-
         {/* All Cuisines Grid */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">All Cuisines</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">All Cuisines</h2>
 
-          {filteredCuisines.length === 0 ? (
+          {cuisines.length === 0 ? (
             <div className="text-center py-16">
               <div className="text-gray-400 mb-4">
                 <Globe className="h-16 w-16 mx-auto" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">No cuisines found</h3>
-              <p className="text-gray-500 mb-4">
-                Try adjusting your search criteria
+              <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">No cuisines available</h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                Please check back later for more culinary inspiration.
               </p>
-              <button
-                onClick={() => setSearchTerm('')}
-                className="text-olive-600 hover:text-olive-700 font-medium"
-              >
-                Clear search →
-              </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {filteredCuisines.map((cuisine) => (
+              {cuisines.map((cuisine) => (
                 <Link
                   key={cuisine.strArea}
                   href={`/recipes?cuisine=${encodeURIComponent(cuisine.strArea)}&source=all`}
                   className="group"
                 >
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group-hover:border-olive-300">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-all group-hover:border-olive-300">
                     <div className="text-center">
                       <div className="mb-3 group-hover:scale-110 transition-transform flex items-center justify-center h-10">
                         {getCuisineFlagImage(cuisine.strArea) ? (
                           <Image src={getCuisineFlagImage(cuisine.strArea)} alt={`${cuisine.strArea} flag`} width={40} height={28} className="rounded shadow-sm" />
                         ) : (
-                          <Globe className="h-6 w-6 text-gray-500" />
+                          <Globe className="h-6 w-6 text-gray-500 dark:text-gray-300" />
                         )}
                       </div>
-                      <h3 className="font-semibold text-gray-900 group-hover:text-olive-600 transition-colors">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-olive-600 transition-colors">
                         {cuisine.strArea}
                       </h3>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {(() => {
                           const counts = allCuisinesCounts[cuisine.strArea]
                           if (counts) {

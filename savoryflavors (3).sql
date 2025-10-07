@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 05, 2025 at 03:15 AM
+-- Generation Time: Oct 05, 2025 at 09:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -477,6 +477,35 @@ CREATE TABLE `nutritional_info` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `payments`
+--
+
+CREATE TABLE `payments` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `plan_id` int(11) DEFAULT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `currency` char(3) NOT NULL DEFAULT 'PHP',
+  `payment_intent_id` varchar(255) NOT NULL,
+  `status` enum('pending','requires_action','succeeded','failed','canceled') DEFAULT 'pending',
+  `payment_method` varchar(50) DEFAULT NULL,
+  `error_message` text DEFAULT NULL,
+  `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`id`, `user_id`, `plan_id`, `amount`, `currency`, `payment_intent_id`, `status`, `payment_method`, `error_message`, `metadata`, `created_at`, `updated_at`) VALUES
+(1, 6, 1, 199.00, 'PHP', 'pi_X9fXGQah7n1vN7QX5tsEj9tf', 'succeeded', 'card', NULL, NULL, '2025-10-05 16:53:40', '2025-10-05 16:53:40'),
+(2, 2147483647, 1, 199.00, 'PHP', 'pi_TBHEe6fhQrkwzqky4dRpoKLX', 'succeeded', 'card', NULL, NULL, '2025-10-05 17:53:05', '2025-10-05 17:53:05');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `recipes`
 --
 
@@ -487,6 +516,7 @@ CREATE TABLE `recipes` (
   `title` varchar(255) NOT NULL,
   `slug` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
+  `instructions` text DEFAULT NULL,
   `prep_time` int(11) DEFAULT NULL COMMENT 'in minutes',
   `cook_time` int(11) DEFAULT NULL COMMENT 'in minutes',
   `servings` int(11) DEFAULT NULL,
@@ -514,10 +544,10 @@ CREATE TABLE `recipes` (
 -- Dumping data for table `recipes`
 --
 
-INSERT INTO `recipes` (`id`, `user_id`, `is_public`, `title`, `slug`, `description`, `prep_time`, `cook_time`, `servings`, `difficulty`, `category`, `cuisine`, `image`, `video_url`, `is_private`, `is_featured`, `status`, `views`, `created_at`, `updated_at`, `approval_status`, `admin_notes`, `approved_by`, `approved_at`, `rejected_at`, `rejection_reason`, `submitted_at`) VALUES
-(1, 76, 1, 'Adobo', 'adobo-mgclubn2', 'adobo', 15, 50, 3, 'MEDIUM', 'main-course', 'american', NULL, NULL, 0, 0, 'PUBLISHED', 0, '2025-10-05 02:26:48.302', '2025-10-05 02:26:48.302', 'approved', NULL, NULL, NULL, NULL, NULL, '2025-10-05 02:26:48.306'),
-(6, 76, 0, 'Sinigang', 'sinigang-mgcps3y4', 'baboy', 15, 60, 6, 'EASY', 'main-course', 'american', NULL, NULL, 0, 0, 'DRAFT', 0, '2025-10-05 04:17:03.484', '2025-10-05 07:25:24.000', 'approved', NULL, NULL, NULL, NULL, NULL, '2025-10-05 04:17:03.484'),
-(7, 76, 1, 'Grilled Chicken Penne al Fresco', 'grilled chicken penne al fresco-mgcyrv5r', 'chicken', 20, 90, 6, 'HARD', 'main-course', 'french', NULL, NULL, 0, 0, 'PUBLISHED', 0, '2025-10-05 08:28:48.639', '2025-10-05 08:28:48.639', 'approved', NULL, NULL, NULL, NULL, NULL, '2025-10-05 08:28:48.639');
+INSERT INTO `recipes` (`id`, `user_id`, `is_public`, `title`, `slug`, `description`, `instructions`, `prep_time`, `cook_time`, `servings`, `difficulty`, `category`, `cuisine`, `image`, `video_url`, `is_private`, `is_featured`, `status`, `views`, `created_at`, `updated_at`, `approval_status`, `admin_notes`, `approved_by`, `approved_at`, `rejected_at`, `rejection_reason`, `submitted_at`) VALUES
+(1, 76, 1, 'Adobo', 'adobo-mgclubn2', 'adobo', NULL, 15, 50, 3, 'MEDIUM', 'main-course', 'american', NULL, NULL, 0, 0, 'PUBLISHED', 0, '2025-10-05 02:26:48.302', '2025-10-05 02:26:48.302', 'approved', NULL, NULL, NULL, NULL, NULL, '2025-10-05 02:26:48.306'),
+(6, 76, 0, 'Sinigang', 'sinigang-mgcps3y4', 'baboy', NULL, 15, 60, 6, 'EASY', 'main-course', 'american', NULL, NULL, 0, 0, 'DRAFT', 0, '2025-10-05 04:17:03.484', '2025-10-05 07:25:24.000', 'approved', NULL, NULL, NULL, NULL, NULL, '2025-10-05 04:17:03.484'),
+(7, 76, 1, 'Grilled Chicken Penne al Fresco', 'grilled chicken penne al fresco-mgcyrv5r', 'chicken', NULL, 20, 90, 6, 'HARD', 'main-course', 'french', NULL, NULL, 0, 0, 'PUBLISHED', 0, '2025-10-05 08:28:48.639', '2025-10-05 08:28:48.639', 'approved', NULL, NULL, NULL, NULL, NULL, '2025-10-05 08:28:48.639');
 
 --
 -- Triggers `recipes`
@@ -758,6 +788,15 @@ CREATE TABLE `subscriptions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
+-- Dumping data for table `subscriptions`
+--
+
+INSERT INTO `subscriptions` (`id`, `user_id`, `plan_id`, `status`, `start_date`, `end_date`, `canceled_at`, `payment_method`, `last_payment_date`, `next_billing_date`, `stripe_subscription_id`, `stripe_customer_id`, `created_at`, `updated_at`) VALUES
+(3, 76, 1, 'active', '2025-10-06 01:45:12', '2125-10-06 01:45:12', NULL, 'admin_granted', NULL, '2125-10-06 01:45:12', NULL, NULL, '2025-10-05 05:43:53', '2025-10-05 17:45:12'),
+(4, 6, 1, 'active', '2025-10-06 00:53:40', '2025-11-06 00:53:40', NULL, NULL, NULL, NULL, NULL, NULL, '2025-10-05 16:53:40', '2025-10-05 16:53:40'),
+(5, 2147483647, 1, 'active', '2025-10-06 01:53:05', '2025-11-06 01:53:05', NULL, NULL, NULL, NULL, NULL, NULL, '2025-10-05 17:53:05', '2025-10-05 17:53:05');
+
+--
 -- Triggers `subscriptions`
 --
 DELIMITER $$
@@ -839,6 +878,14 @@ CREATE TABLE `subscription_plans` (
   `plan_id` varchar(50) NOT NULL COMMENT 'Unique identifier for the plan (e.g., basic, premium)'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `subscription_plans`
+--
+
+INSERT INTO `subscription_plans` (`id`, `name`, `slug`, `description`, `price`, `billing_cycle`, `features`, `is_active`, `created_at`, `updated_at`, `plan_id`) VALUES
+(1, 'Premium', 'legacy-plan-1', 'Premium subscription with full access to all features (monthly)', 199.00, 'monthly', '[\"Unlimited recipe access\",\"Ad-free experience\",\"Exclusive content\",\"Priority support\"]', 1, '2025-10-05 05:43:53', '2025-10-05 17:45:12', 'LEGACY_PLAN_1'),
+(3, 'Premium', 'premium-yearly', 'Premium subscription with full access to all features (yearly)', 1990.00, 'yearly', '[\"Unlimited recipe access\",\"Ad-free experience\",\"Exclusive content\",\"Priority support\",\"Yearly member badge\"]', 1, '2025-10-05 17:45:12', '2025-10-05 17:45:12', 'PREMIUM-YEARLY');
+
 -- --------------------------------------------------------
 
 --
@@ -885,7 +932,8 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `image`, `role`, `email_
 (7, 'Test User', 'test-1759067601307@example.com', NULL, NULL, 'USER', 127, 'none', NULL, NULL, NULL, NULL, '2025-09-28 21:53:21.309', '0000-00-00 00:00:00.000', 0),
 (9, 'Test User', 'test-1759067776395@example.com', '$2a$12$KxG8NxY3nX1MqB8zL5kQkOQ5VQ1X9JcX9JcX9JcX9JcX9JcX9Jc', NULL, 'USER', 127, 'none', NULL, NULL, NULL, NULL, '2025-09-28 21:56:16.396', '0000-00-00 00:00:00.000', 0),
 (73, 'JOhn Doe', 'admin1@example.com', '$2a$12$oQDoS65ajhJyl5VGqsrIRe/4GwcdlwIgEvQnJ3/waW3gw7UNbMthq', NULL, 'USER', 127, 'none', NULL, NULL, NULL, NULL, '2025-09-28 22:00:01.000', '2025-09-28 22:00:01.000', 0),
-(76, 'Admin User', 'savoryadmin@example.com', '$2a$10$Z67wwG4ZRJWVxmlUVArm3OANk./kOLqa/xZsj981q90WJF8EPmKZ6', NULL, 'ADMIN', 0, 'none', NULL, NULL, NULL, NULL, '2025-09-29 19:46:22.175', '0000-00-00 00:00:00.000', 1);
+(76, 'Admin User', 'savoryadmin@example.com', '$2a$10$Z67wwG4ZRJWVxmlUVArm3OANk./kOLqa/xZsj981q90WJF8EPmKZ6', NULL, 'ADMIN', 0, 'active', 3, NULL, NULL, NULL, '2025-09-29 19:46:22.175', '0000-00-00 00:00:00.000', 1),
+(2147483647, 'Matthieu Ortizo', 'matthieu2002@example.com', '$2a$12$MBdjjc7UEgTWflV6kkIb9OU3NDyNkWqsPhxXk4LFlCXc2T8A/PsIO', NULL, 'USER', 127, 'none', NULL, NULL, NULL, NULL, '2025-10-06 01:50:45.520', '0000-00-00 00:00:00.000', 0);
 
 -- --------------------------------------------------------
 
@@ -1175,6 +1223,16 @@ ALTER TABLE `notifications`
 --
 ALTER TABLE `nutritional_info`
   ADD PRIMARY KEY (`recipe_id`);
+
+--
+-- Indexes for table `payments`
+--
+ALTER TABLE `payments`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_payment_intent` (`payment_intent_id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_plan_id` (`plan_id`),
+  ADD KEY `idx_status` (`status`);
 
 --
 -- Indexes for table `recipes`
@@ -1472,10 +1530,16 @@ ALTER TABLE `notifications`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `payments`
+--
+ALTER TABLE `payments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
 -- AUTO_INCREMENT for table `recipes`
 --
 ALTER TABLE `recipes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
 
 --
 -- AUTO_INCREMENT for table `recipe_ingredients`
@@ -1523,7 +1587,7 @@ ALTER TABLE `shopping_list_items`
 -- AUTO_INCREMENT for table `subscriptions`
 --
 ALTER TABLE `subscriptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `subscription_invoices`
@@ -1541,7 +1605,7 @@ ALTER TABLE `subscription_payments`
 -- AUTO_INCREMENT for table `subscription_plans`
 --
 ALTER TABLE `subscription_plans`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `tags`
@@ -1553,7 +1617,7 @@ ALTER TABLE `tags`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2147483648;
 
 --
 -- AUTO_INCREMENT for table `user_auth_providers`
@@ -1658,6 +1722,13 @@ ALTER TABLE `notifications`
 --
 ALTER TABLE `nutritional_info`
   ADD CONSTRAINT `nutritional_info_recipe_id_fkey` FOREIGN KEY (`recipe_id`) REFERENCES `recipes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `payments`
+--
+ALTER TABLE `payments`
+  ADD CONSTRAINT `fk_payments_plan` FOREIGN KEY (`plan_id`) REFERENCES `subscription_plans` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_payments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `recipes`

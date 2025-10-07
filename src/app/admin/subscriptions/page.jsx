@@ -9,21 +9,41 @@ import { Search, CreditCard, Check, X, Clock, AlertCircle, User, Calendar } from
 import { getSubscriptions, updateSubscription } from '@/lib/actions/admin.actions';
 
 export default function SubscriptionsPage() {
-  const [subscriptions, setSubscriptions] = useState([]);
+  const [subscriptionData, setSubscriptionData] = useState({
+    subscriptions: [],
+    pagination: {
+      total: 0,
+      totalPages: 0,
+    },
+  });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
   const [page, setPage] = useState(1);
   const limit = 10;
 
+  const { subscriptions, pagination } = subscriptionData;
+  const totalPages = Math.max(1, pagination?.totalPages || 1);
+
+  const activeCount = pagination.total || 0;
+  const monthlyRevenue = subscriptions.reduce((acc, sub) => acc + (Number(sub.plan.price) || 0), 0);
+  const pendingRenewals = subscriptions.filter((sub) => sub.status === 'past_due').length;
+
   useEffect(() => {
     const fetchSubscriptions = async () => {
       try {
         setLoading(true);
         const data = await getSubscriptions({ page, limit, status: statusFilter, search });
-        setSubscriptions(data);
+        setSubscriptionData(data);
       } catch (error) {
         console.error('Error fetching subscriptions:', error);
+        setSubscriptionData({
+          subscriptions: [],
+          pagination: {
+            total: 0,
+            totalPages: 0,
+          },
+        });
       } finally {
         setLoading(false);
       }
@@ -35,24 +55,38 @@ export default function SubscriptionsPage() {
   const handleStatusChange = async (subscriptionId, status) => {
     try {
       await updateSubscription(subscriptionId, { status });
-      setSubscriptions(subscriptions.map(sub => 
-        sub.id === subscriptionId ? { ...sub, status } : sub
-      ));
+      setSubscriptionData((prev) => ({
+        ...prev,
+        subscriptions: prev.subscriptions.map((sub) =>
+          sub.id === subscriptionId ? { ...sub, status } : sub
+        ),
+      }));
     } catch (error) {
       console.error('Error updating subscription status:', error);
     }
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) {
+      return '—';
+    }
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  const formatCurrency = (amount, currency = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-    }).format(amount);
+  const formatCurrency = (amount) => {
+    const numericAmount = Number(amount);
+
+    if (Number.isNaN(numericAmount)) {
+      return 'P0.00 pesos';
+    }
+
+    const formattedAmount = numericAmount.toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+    return `P${formattedAmount} pesos`;
   };
 
   return (
@@ -66,40 +100,40 @@ export default function SubscriptionsPage() {
         <div className="bg-white p-6 rounded-lg border shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Active Subscriptions</p>
-              <p className="text-2xl font-bold">1,234</p>
+              <p className="text-sm font-medium text-gray-500">Active Premium Subscriptions</p>
+              <p className="text-2xl font-bold">{activeCount}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
               <Check className="h-6 w-6 text-green-600" />
             </div>
           </div>
-          <p className="mt-2 text-sm text-green-600">+12% from last month</p>
+          <p className="mt-2 text-sm text-green-600">All premium subscribers currently filtered</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg border shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Monthly Revenue</p>
-              <p className="text-2xl font-bold">{formatCurrency(12540)}</p>
+              <p className="text-2xl font-bold">{formatCurrency(monthlyRevenue)}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-full">
               <CreditCard className="h-6 w-6 text-blue-600" />
             </div>
           </div>
-          <p className="mt-2 text-sm text-blue-600">+8% from last month</p>
+          <p className="mt-2 text-sm text-blue-600">Based on plans shown on this page</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg border shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Pending Renewals</p>
-              <p className="text-2xl font-bold">42</p>
+              <p className="text-2xl font-bold">{pendingRenewals}</p>
             </div>
             <div className="p-3 bg-yellow-100 rounded-full">
               <Clock className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
-          <p className="mt-2 text-sm text-yellow-600">3 expiring today</p>
+          <p className="mt-2 text-sm text-yellow-600">Total with status past due</p>
         </div>
       </div>
 
@@ -110,11 +144,20 @@ export default function SubscriptionsPage() {
             placeholder="Search subscriptions..."
             className="pl-10"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
         <div className="w-full md:w-48">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value);
+              setPage(1);
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -169,8 +212,8 @@ export default function SubscriptionsPage() {
                   </TableCell>
                   <td className="font-medium">{sub.plan.name}</td>
                   <td>
-                    <div className="font-medium">{formatCurrency(sub.plan.amount, sub.currency)}</div>
-                    <div className="text-sm text-gray-500">per {sub.plan.interval}</div>
+                    <div className="font-medium">{formatCurrency(sub.plan.price)}</div>
+                    <div className="text-sm text-gray-500">per {sub.plan.billingCycle}</div>
                   </td>
                   <td>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -186,7 +229,7 @@ export default function SubscriptionsPage() {
                   <td>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
-                      <span>{formatDate(sub.current_period_end)}</span>
+                      <span>{formatDate(sub.nextBillingDate)}</span>
                     </div>
                   </td>
                   <td>
@@ -221,7 +264,7 @@ export default function SubscriptionsPage() {
 
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-500">
-          Showing {subscriptions.length} of {subscriptions.length} subscriptions
+          Showing {subscriptions.length} of {pagination.total} subscriptions
         </div>
         <div className="flex gap-2">
           <Button
@@ -235,7 +278,8 @@ export default function SubscriptionsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPage(p => p + 1)}
+            disabled={page >= totalPages || subscriptions.length < limit}
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
           >
             Next
           </Button>

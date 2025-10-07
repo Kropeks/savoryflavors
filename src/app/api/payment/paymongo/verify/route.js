@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { activateSubscription } from '@/app/api/payment/paymongo/subscription-utils';
 
 export async function GET(req) {
   const session = await auth();
@@ -71,6 +72,38 @@ export async function GET(req) {
     const isSucceeded = status === 'succeeded';
     const requiresAction = status === 'awaiting_next_action';
 
+    let activation = null;
+
+    if (isSucceeded && metadata?.userId && metadata?.planId) {
+      try {
+        activation = await activateSubscription({
+          userId: metadata.userId,
+          planId: metadata.planId,
+          billingCycle: metadata.billingCycle,
+          amountCentavos: attributes.amount,
+          paymentIntentId,
+          paymentMethod: metadata.paymentMethod || attributes.payment_method || 'card',
+        });
+      } catch (activationError) {
+        console.error('PayMongo verification activation error:', activationError);
+        return NextResponse.json(
+          {
+            success: false,
+            paymentIntentId,
+            status,
+            requiresAction,
+            amount: attributes.amount,
+            currency: attributes.currency,
+            nextAction: attributes.next_action || null,
+            metadata,
+            message: 'Payment succeeded but subscription activation failed. Please contact support.',
+            activationError: process.env.NODE_ENV === 'development' ? activationError.message : undefined,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
     return NextResponse.json({
       success: isSucceeded,
       paymentIntentId,
@@ -80,6 +113,7 @@ export async function GET(req) {
       currency: attributes.currency,
       nextAction: attributes.next_action || null,
       metadata,
+      activation,
     });
   } catch (error) {
     console.error('PayMongo verification error:', error);

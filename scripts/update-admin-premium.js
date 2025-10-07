@@ -2,38 +2,107 @@ import { pool, query } from '../src/lib/db.js';
 
 async function ensurePremiumPlanExists() {
   try {
-    // Check if any subscription plan exists
-    const [existingPlan] = await query('SELECT id FROM subscription_plans WHERE name = ?', ['Premium']);
-    
-    if (existingPlan) {
-      console.log('Premium plan already exists with ID:', existingPlan.id);
-      return existingPlan.id;
-    }
-    
-    // Create a premium plan if it doesn't exist
-    console.log('Creating Premium subscription plan...');
-    const result = await query(
-      `INSERT INTO subscription_plans 
-       (name, description, price, billing_cycle, features, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [
-        'Premium',
-        'Premium subscription with full access to all features',
-        9.99,  // Price in USD
-        'monthly',
-        JSON.stringify([
-          'Unlimited recipe access',
-          'Ad-free experience',
-          'Exclusive content',
-          'Priority support'
-        ]),
-        true
-      ]
+    const plansToEnsure = [
+      {
+        billingCycle: 'monthly',
+        price: 199.0,
+        description: 'Premium subscription with full access to all features (monthly)',
+      },
+      {
+        billingCycle: 'yearly',
+        price: 1990.0,
+        description: 'Premium subscription with full access to all features (yearly)',
+      },
+    ];
+
+    // Ensure legacy rows have slugs/plan_ids to avoid duplicate '' violations
+    await query(
+      `UPDATE subscription_plans
+       SET slug = CONCAT('legacy-plan-', id),
+           plan_id = UPPER(CONCAT('LEGACY_PLAN_', id)),
+           updated_at = NOW()
+       WHERE slug IS NULL OR slug = '' OR plan_id IS NULL OR plan_id = ''`
     );
-    
-    console.log('Created Premium plan with ID:', result.insertId);
-    return result.insertId;
-    
+
+    let monthlyPlanId = null;
+
+    const generateSlug = (cycle) => `premium-${cycle}`;
+
+    for (const plan of plansToEnsure) {
+      const slug = generateSlug(plan.billingCycle);
+      const planIdValue = slug.toUpperCase();
+
+      const [existingPlan] = await query(
+        `SELECT id, price, slug FROM subscription_plans 
+         WHERE (name = ? OR slug = ?) AND billing_cycle = ?
+         ORDER BY slug = '' DESC, slug IS NULL DESC
+         LIMIT 1`,
+        ['Premium', slug, plan.billingCycle]
+      );
+
+      if (existingPlan) {
+        if (Number(existingPlan.price) !== plan.price) {
+          console.log(
+            `Updating Premium ${plan.billingCycle} plan price from ${existingPlan.price} to ${plan.price}`
+          );
+          await query(
+            `UPDATE subscription_plans
+             SET price = ?, description = ?, slug = COALESCE(NULLIF(slug, ''), ?), plan_id = COALESCE(NULLIF(plan_id, ''), ?), updated_at = NOW()
+             WHERE id = ?`,
+            [plan.price, plan.description, slug, planIdValue, existingPlan.id]
+          );
+        } else {
+          console.log(`Premium ${plan.billingCycle} plan already up to date (price ${plan.price}).`);
+          if (!existingPlan.slug) {
+            await query(
+              `UPDATE subscription_plans
+               SET slug = ?, plan_id = ?
+               WHERE id = ?`,
+              [slug, planIdValue, existingPlan.id]
+            );
+          }
+        }
+
+        if (plan.billingCycle === 'monthly') {
+          monthlyPlanId = existingPlan.id;
+        }
+
+        continue;
+      }
+
+      console.log(`Creating Premium ${plan.billingCycle} subscription plan...`);
+      const result = await query(
+        `INSERT INTO subscription_plans 
+         (name, slug, description, price, billing_cycle, features, is_active, plan_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [
+          'Premium',
+          slug,
+          plan.description,
+          plan.price,
+          plan.billingCycle,
+          JSON.stringify([
+            'Unlimited recipe access',
+            'Ad-free experience',
+            'Exclusive content',
+            'Priority support',
+            plan.billingCycle === 'yearly' ? 'Yearly member badge' : 'Flexible monthly billing',
+          ]),
+          true,
+          planIdValue,
+        ]
+      );
+
+      if (plan.billingCycle === 'monthly') {
+        monthlyPlanId = result.insertId;
+      }
+    }
+
+    if (!monthlyPlanId) {
+      throw new Error('Failed to ensure Premium monthly plan exists');
+    }
+
+    return monthlyPlanId;
   } catch (error) {
     console.error('Error ensuring premium plan exists:', error);
     throw error;

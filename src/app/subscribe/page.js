@@ -110,7 +110,7 @@ export default function SubscribePage() {
             Choose Your Plan
           </h1>
           <p className="mt-3 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-300 sm:mt-4">
-            Select the plan that works best for you and start cooking smarter with FitSavory Premium
+            Choose the membership that matches how you cook—from core community access to full FitSavory premium benefits.
           </p>
           {infoMessage && (
             <div className="mt-6 mx-auto max-w-2xl rounded-md border border-olive-200 bg-olive-50 px-4 py-3 text-sm text-olive-800 dark:border-olive-800/40 dark:bg-olive-900/20 dark:text-olive-200">
@@ -126,25 +126,31 @@ export default function SubscribePage() {
             <p className="mt-4 flex items-baseline text-gray-900 dark:text-white">
               <span className="text-5xl font-extrabold tracking-tight">Free</span>
             </p>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">For home cooks who want to explore recipes</p>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Core access for exploring recipes and joining the community</p>
             <ul role="list" className="mt-6 space-y-4 flex-1">
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">Access to basic recipes</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Browse all non-premium pages</span>
               </li>
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">Save up to 10 recipes</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Save and favorite recipes</span>
               </li>
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">Basic search functionality</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Create your own recipes</span>
+              </li>
+              <li className="flex items-start">
+                <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Post in the community page</span>
               </li>
             </ul>
             <Button
@@ -167,7 +173,7 @@ export default function SubscribePage() {
               <span className="text-5xl font-extrabold tracking-tight">₱199</span>
               <span className="ml-1 text-xl font-semibold text-gray-500 dark:text-gray-300">/month</span>
             </p>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Billed monthly. Cancel anytime.</p>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Billed monthly. Unlock FitSavory and recipe monetization.</p>
             <ul role="list" className="mt-6 space-y-4 flex-1">
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -179,25 +185,25 @@ export default function SubscribePage() {
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">Unlimited recipe saves</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">All Basic plan features</span>
               </li>
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">Advanced search filters</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Access to FitSavory dashboard</span>
               </li>
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">Ad-free experience</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Monetize and sell your recipes</span>
               </li>
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">Priority support</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Premium member badge</span>
               </li>
             </ul>
             <Button
@@ -221,13 +227,13 @@ export default function SubscribePage() {
               <span className="text-5xl font-extrabold tracking-tight">₱1,990</span>
               <span className="ml-1 text-xl font-semibold text-gray-500 dark:text-gray-300">/year</span>
             </p>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Billed annually. Save 17%</p>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Billed annually. Two free months plus future feature perks.</p>
             <ul role="list" className="mt-6 space-y-4 flex-1">
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">All Premium Monthly features</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Everything in Premium Monthly</span>
               </li>
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -239,7 +245,7 @@ export default function SubscribePage() {
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="ml-3 text-gray-700 dark:text-gray-300">Exclusive content</span>
+                <span className="ml-3 text-gray-700 dark:text-gray-300">Early access to future features</span>
               </li>
               <li className="flex items-start">
                 <svg className="h-6 w-6 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

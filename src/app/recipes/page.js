@@ -317,18 +317,18 @@ export default function Recipes() {
   }
 
   return (
-    <div className="min-h-screen pt-20 bg-soft-50">
+    <div className="min-h-screen pt-20 bg-soft-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-olive-800 mb-4 font-fredoka">Recipes</h1>
-            <p className="text-lg text-olive-700 font-fredoka">
+          <h1 className="text-4xl font-bold text-olive-800 dark:text-olive-200 mb-4 font-fredoka">Recipes</h1>
+            <p className="text-lg text-olive-700 dark:text-olive-200/80 font-fredoka">
               Discover amazing recipes from trusted food APIs
             </p>
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md border border-soft-200 dark:border-gray-800 p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-4">
             {/* Search */}
             <div className="relative xl:col-span-2">
@@ -338,7 +338,7 @@ export default function Recipes() {
                 placeholder="Search recipes..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input w-full pl-10 pr-4 py-2 border border-soft-200 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-olive-500 bg-white text-olive-800 placeholder-olive-600 font-fredoka"
+                className="search-input w-full pl-10 pr-4 py-2 border border-soft-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-olive-500 bg-white dark:bg-gray-800 text-olive-800 dark:text-gray-100 placeholder-olive-600 dark:placeholder-gray-400 font-fredoka"
               />
             </div>
 
@@ -346,7 +346,7 @@ export default function Recipes() {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="filter-input px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+              className="filter-input px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
             >
               <option value="">All Categories</option>
               {categories.map((category) => (
@@ -360,7 +360,7 @@ export default function Recipes() {
             <select
               value={selectedCuisine}
               onChange={(e) => setSelectedCuisine(e.target.value)}
-              className="filter-input px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+              className="filter-input px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
             >
               <option value="">All Cuisines</option>
               {cuisines.map((cuisine) => (
@@ -377,7 +377,7 @@ export default function Recipes() {
                 placeholder="Search by ingredient..."
                 value={selectedIngredient}
                 onChange={(e) => setSelectedIngredient(e.target.value)}
-                className="filter-input px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent w-full"
+                className="filter-input px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent w-full bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400"
               />
               {selectedIngredient && selectedIngredient !== debouncedIngredient && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400">
@@ -390,7 +390,7 @@ export default function Recipes() {
             <select
               value={selectedSource}
               onChange={(e) => setSelectedSource(e.target.value)}
-              className="filter-input px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+              className="filter-input px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
             >
               {sources.map((source) => (
                 <option key={source.value} value={source.value}>
@@ -403,7 +403,7 @@ export default function Recipes() {
             <select
               value={dietFilter}
               onChange={(e) => setDietFilter(e.target.value)}
-              className="filter-input px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+              className="filter-input px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
             >
               {dietOptions.map((diet) => (
                 <option key={diet.value} value={diet.value}>
@@ -418,7 +418,7 @@ export default function Recipes() {
             <select
               value={nutritionFilter}
               onChange={(e) => setNutritionFilter(e.target.value)}
-              className="filter-input px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent"
+              className="filter-input px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
             >
               {nutritionOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -430,7 +430,7 @@ export default function Recipes() {
 
           <div className="flex justify-between items-center">
             <div className="flex flex-wrap gap-2 items-center">
-              <p className="text-olive-700 font-fredoka">
+              <p className="text-olive-700 dark:text-olive-200 font-fredoka">
                 {recipes.length} recipe{recipes.length !== 1 ? 's' : ''} found
                 {selectedSource !== 'all' && ` from ${sources.find(s => s.value === selectedSource)?.label}`}
               </p>
@@ -438,32 +438,32 @@ export default function Recipes() {
               {/* Active Filters Display */}
               <div className="flex flex-wrap gap-1 ml-4">
                 {searchTerm && (
-                  <span className="bg-olive-100 text-olive-800 px-2 py-1 rounded-full text-xs">
+                  <span className="bg-olive-100 text-olive-800 dark:bg-olive-900/40 dark:text-olive-200 px-2 py-1 rounded-full text-xs">
                     Search: "{searchTerm}"
                   </span>
                 )}
                 {selectedCategory && (
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                  <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 px-2 py-1 rounded-full text-xs">
                     Category: {selectedCategory}
                   </span>
                 )}
                 {selectedCuisine && (
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                  <span className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200 px-2 py-1 rounded-full text-xs">
                     Cuisine: {selectedCuisine}
                   </span>
                 )}
                 {debouncedIngredient && (
-                  <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
+                  <span className="bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200 px-2 py-1 rounded-full text-xs">
                     Ingredient: {debouncedIngredient}
                   </span>
                 )}
                 {dietFilter && (
-                  <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">
+                  <span className="bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200 px-2 py-1 rounded-full text-xs">
                     Diet: {dietOptions.find(d => d.value === dietFilter)?.label}
                   </span>
                 )}
                 {nutritionFilter && (
-                  <span className="bg-pink-100 text-pink-800 px-2 py-1 rounded-full text-xs">
+                  <span className="bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-200 px-2 py-1 rounded-full text-xs">
                     Nutrition: {nutritionOptions.find(n => n.value === nutritionFilter)?.label}
                   </span>
                 )}
@@ -471,7 +471,7 @@ export default function Recipes() {
             </div>
 
             <div className="flex gap-2">
-              <Link href="/cuisines" className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2">
+              <Link href="/cuisines" className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
                 <Utensils className="h-4 w-4" />
                 Browse Cuisines
               </Link>
@@ -486,13 +486,13 @@ export default function Recipes() {
         {/* Recipes Grid */}
         {recipes.length === 0 ? (
           <div className="text-center py-16">
-            <div className="text-gray-400 mb-4">
+            <div className="text-gray-400 dark:text-gray-500 mb-4">
               <Search className="h-16 w-16 mx-auto" />
             </div>
-            <h3 className="text-xl font-semibold text-olive-800 mb-2">
+            <h3 className="text-xl font-semibold text-olive-800 dark:text-olive-200 mb-2">
               {selectedSource === 'edamam' ? 'Recipes currently unavailable' : 'No recipes found'}
             </h3>
-            <p className="text-olive-600 mb-4">
+            <p className="text-olive-600 dark:text-olive-200/80 mb-4">
               {selectedSource === 'edamam'
                 ? 'Unable to load recipes. This might be due to API limitations or connectivity issues.'
                 : isInitialLoad
@@ -501,7 +501,7 @@ export default function Recipes() {
               }
             </p>
             <div className="flex justify-center gap-4">
-              <Link href="/cuisines" className="text-olive-600 hover:text-olive-700 font-medium">
+              <Link href="/cuisines" className="text-olive-600 hover:text-olive-700 dark:text-olive-200 dark:hover:text-olive-100 font-medium">
                 Browse cuisines →
               </Link>
               <button
@@ -515,7 +515,7 @@ export default function Recipes() {
                   setSelectedIngredient('')
                   setDebouncedIngredient('')
                 }}
-                className="text-olive-600 hover:text-olive-700 font-medium"
+                className="text-olive-600 hover:text-olive-700 dark:text-olive-200 dark:hover:text-olive-100 font-medium"
               >
                 Clear all filters →
               </button>
@@ -528,7 +528,7 @@ export default function Recipes() {
                 const nutritionBadge = getNutritionBadge(recipe)
                 const isRemoteImage = recipe.hasImage && /^https?:\/\//i.test(recipe.image)
                 return (
-                  <div key={`${recipe.id}-${index}`} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                  <div key={`${recipe.id}-${index}`} className="bg-white dark:bg-gray-900 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-transparent dark:border-gray-800">
                     <div className="relative h-56">
                       <Image
                         src={recipe.image || '/placeholder-recipe.jpg'}
@@ -548,33 +548,33 @@ export default function Recipes() {
                       </div>
                     </div>
                     <div className="p-5">
-                      <h3 className="text-lg font-bold mb-2 line-clamp-2 h-14 text-olive-900">{recipe.title}</h3>
+                      <h3 className="text-lg font-bold mb-2 line-clamp-2 h-14 text-olive-900 dark:text-olive-200">{recipe.title}</h3>
                       <div className="flex flex-wrap gap-2 mb-3">
                         {/* Edamam diet labels */}
                         {recipe.dietLabels && recipe.dietLabels.length > 0 && (
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200 px-2 py-1 rounded-full">
                             {recipe.dietLabels[0]}
                           </span>
                         )}
                         {/* Edamam health labels */}
                         {recipe.healthLabels && recipe.healthLabels.length > 0 && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 px-2 py-1 rounded-full">
                             {recipe.healthLabels[0]}
                           </span>
                         )}
                         {/* Standard fields that work for both sources */}
                         {recipe.category && (
-                          <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200 px-2 py-1 rounded-full">
                             {recipe.category}
                           </span>
                         )}
                         {recipe.cuisine && (
-                          <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200 px-2 py-1 rounded-full">
                             {recipe.cuisine}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center justify-between text-sm text-olive-700 mb-4">
+                      <div className="flex items-center justify-between text-sm text-olive-700 dark:text-olive-200 mb-4">
                         <div className="flex items-center">
                           <Clock className="w-4 h-4 mr-1 text-green-600" />
                           <span>{recipe.readyInMinutes || '30'} min</span>
@@ -591,7 +591,7 @@ export default function Recipes() {
                       <div className="flex justify-end">
                         <Link 
                           href={`/recipes/${recipe.slug || recipe.id}?source=${encodeURIComponent(recipe.sourceKey || recipe.source?.toLowerCase() || 'mealdb')}`} 
-                          className="text-green-600 hover:text-green-800 text-sm font-medium flex items-center group"
+                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium flex items-center group"
                         >
                           View Recipe
                           <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

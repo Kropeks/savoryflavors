@@ -26,10 +26,9 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
       period: 'month',
       features: [
         'Access to FitSavory',
-        'Save unlimited recipes',
+        'Save unlimited favorite recipes',
         'Sell your own recipes',
-        'Priority support',
-        'Ad-free experience'
+        'Premium member badge'
       ]
     },
     yearly: {
@@ -38,20 +37,20 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
       period: 'year',
       savings: 'Save 17%',
       features: [
-        'Everything in Monthly',
+        'Everything in Premium Monthly',
         '2 months free',
-        'Exclusive content',
-        'Yearly member badge',
-        'Priority customer support'
+        'Early access to future features',
+        'Yearly member badge'
       ]
     }
   };
 
   const handlePayment = async (e) => {
     e.preventDefault();
+    const formElement = e.currentTarget;
     setPaymentError('');
     setPaymentProcessing(true);
-    
+
     try {
       // Get the plan price based on selection
       const amount = selectedPlan === 'monthly' ? 19900 : 199000; // in centavos
@@ -89,7 +88,9 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
       if (!response.ok) {
         const friendlyMessage = data.message?.includes('ECONNREFUSED')
           ? 'Payment failed because the database is unavailable. Please start MySQL and try again.'
-          : data.message;
+          : data.message?.includes('testing for PayMongo')
+            ? 'PayMongo only accepts the sandbox card numbers listed below during testing. Please use one of them.'
+            : data.message;
         throw new Error(friendlyMessage || 'Failed to process payment');
       }
 
@@ -110,9 +111,15 @@ export default function PricingFormModal({ isOpen, onClose, onPlanSelect, planTy
           return;
         }
         if (data.success) {
+          formElement.reset();
+          setCardNumber('');
+          setCardExpMonth('');
+          setCardExpYear('');
+          setCardCvc('');
+          setPaymentError('');
           setPaymentSuccess(true);
           setTimeout(() => {
-            router.push('/');
+            onPlanSelect?.(selectedPlan);
             onClose();
           }, 2000);
           return;

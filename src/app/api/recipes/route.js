@@ -5,12 +5,21 @@ import { randomUUID } from 'crypto'
 
 import { auth } from '@/auth'
 import { query, queryOne, transaction } from '@/lib/db'
+import { checkUserSubscription } from '@/lib/subscription'
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads', 'recipes')
 
 const toNumberOrNull = (value, parser = Number.parseInt) => {
   if (value === null || value === undefined || value === '') return null
   const parsed = parser(value, 10)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const toDecimalOrNull = (value) => {
+  if (value === null || value === undefined) return null
+  const stringValue = value?.toString().trim()
+  if (!stringValue) return null
+  const parsed = Number.parseFloat(stringValue)
   return Number.isFinite(parsed) ? parsed : null
 }
 
@@ -35,6 +44,9 @@ const mapRecipeRow = (row) => {
     category: row.category || 'other',
     cuisine: row.cuisine || '',
     image: row.image || '/placeholder-recipe.jpg',
+    isPremium: Boolean(row.is_premium),
+    price: row.price !== null && row.price !== undefined ? Number.parseFloat(row.price) : null,
+    previewText: row.preview_text || null,
     status: row.status || 'draft',
     isPublic: Boolean(row.is_public),
     approvalStatus: row.approval_status || 'pending',
@@ -106,6 +118,9 @@ export async function GET(request) {
          r.description,
          r.instructions,
          r.image,
+         r.is_premium,
+         r.price,
+         r.preview_text,
          r.prep_time,
          r.cook_time,
          r.servings,
@@ -186,6 +201,9 @@ export async function POST(request) {
     const difficulty = formData.get('difficulty')?.toString().trim() || 'medium'
     const category = formData.get('category')?.toString().trim() || null
     const cuisine = formData.get('cuisine')?.toString().trim() || null
+    const priceInput = toDecimalOrNull(formData.get('price'))
+    const previewTextRaw = formData.get('previewText')?.toString().trim() || ''
+    const previewText = previewTextRaw ? previewTextRaw.slice(0, 250) : null
 
     const ingredientsRaw = formData.get('ingredients')?.toString() || '[]'
     let ingredients = []
@@ -229,6 +247,38 @@ export async function POST(request) {
 
     const slug = generateSlug(title)
 
+    const subscription = await checkUserSubscription(parsedUserId)
+    const hasPremiumAccess = Boolean(subscription?.isPremium)
+
+    let monetization = {
+      isPremium: false,
+      price: null,
+      previewText: null
+    }
+
+    if (priceInput !== null) {
+      if (!hasPremiumAccess) {
+        return NextResponse.json({ error: 'Premium subscription required to set a price' }, { status: 403 })
+      }
+
+      if (priceInput < 0) {
+        return NextResponse.json({ error: 'Price must be zero or greater' }, { status: 400 })
+      }
+
+      monetization = {
+        isPremium: priceInput > 0,
+        price: priceInput,
+        previewText: null
+      }
+    }
+
+    if (previewText) {
+      if (!hasPremiumAccess) {
+        return NextResponse.json({ error: 'Premium subscription required to set preview text' }, { status: 403 })
+      }
+      monetization.previewText = previewText
+    }
+
     await transaction(async (connection) => {
       const insertValues = [
         parsedUserId,
@@ -242,10 +292,12 @@ export async function POST(request) {
         normalizedCategory,
         normalizedCuisine,
         storedImagePath ?? null,
-        null,
+        monetization.isPremium ? 1 : 0,
         0,
         0,
         0,
+        monetization.price,
+        monetization.previewText,
         'PUBLISHED',
         0,
         'pending',
@@ -267,17 +319,19 @@ export async function POST(request) {
           category,
           cuisine,
           image,
-          video_url,
+          is_premium,
           is_public,
           is_private,
           is_featured,
+          price,
+          preview_text,
           status,
           views,
           approval_status,
           created_at,
           updated_at,
           submitted_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         insertValues
       )
       const recipeId = recipeResult.insertId
@@ -350,7 +404,6 @@ export async function POST(request) {
               step_number,
               instruction,
               image,
-              video_url,
               created_at,
               updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?)` ,

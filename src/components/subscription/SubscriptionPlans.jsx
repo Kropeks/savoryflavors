@@ -22,10 +22,10 @@ export default function SubscriptionPlans({ currentPlan = null }) {
       billing: 'monthly',
       description: 'Essential features for home cooks',
       features: [
-        'Browse all public recipes',
-        'Post in community',
-        'Create and share recipes',
-        'Basic support via email'
+        'Browse all non-premium pages',
+        'Save and favorite recipes',
+        'Create your own recipes',
+        'Post in the community page'
       ],
       isCurrent: currentPlan?.name === 'Basic'
     },
@@ -35,14 +35,12 @@ export default function SubscriptionPlans({ currentPlan = null }) {
       price: 199,
       priceId: 'price_premium_monthly',
       billing: 'monthly',
-      description: 'Unlock all features including recipe monetization',
+      description: 'Unlock FitSavory, recipe monetization, and premium perks',
       features: [
-        'All Basic features',
-        'Access to FitSavory',
-        'Save unlimited favorite recipes',
-        'Sell your own recipes',
-        'Priority 24/7 support',
-        'Ad-free experience'
+        'All Basic plan features',
+        'Access to FitSavory dashboard',
+        'Monetize and sell your recipes',
+        'Premium member badge'
       ],
       isPopular: true,
       isCurrent: currentPlan?.name === 'Premium' && currentPlan?.billing_cycle === 'monthly'
@@ -53,13 +51,11 @@ export default function SubscriptionPlans({ currentPlan = null }) {
       price: 1990,
       priceId: 'price_premium_yearly',
       billing: 'yearly',
-      description: 'Best value - Get 2 months free',
+      description: 'Best value with two free months and future feature access',
       features: [
-        'All Premium Monthly features',
-        'Save ₱398 vs monthly',
-        'Priority customer support',
-        'Early access to new features',
-        'Exclusive content',
+        'Everything in Premium Monthly',
+        '2 months free',
+        'Early access to future features',
         'Yearly member badge'
       ],
       isCurrent: currentPlan?.name === 'Premium' && currentPlan?.billing_cycle === 'yearly',

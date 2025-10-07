@@ -81,20 +81,73 @@ export async function activateSubscription({
     insertValues.push(now, endDate);
   }
 
+  let subscriptionResult = { action: null, id: existingSub?.id || null };
+
   if (existingSub) {
     const updateSql = `UPDATE subscriptions SET ${updateAssignments.join(', ')} WHERE user_id = ?`;
     await query(updateSql, [...updateValues, userId]);
+    subscriptionResult = { action: 'updated', id: existingSub.id };
   } else {
     const insertSql = `INSERT INTO subscriptions (${insertColumns.join(', ')}) VALUES (${insertPlaceholders.join(', ')})`;
-    await query(insertSql, insertValues);
+    const insertResult = await query(insertSql, insertValues);
+    subscriptionResult = { action: 'created', id: insertResult?.insertId || null };
   }
 
-  if (amount !== null) {
-    await query(
-      `INSERT INTO payments
-         (user_id, plan_id, amount, currency, payment_intent_id, status, payment_method, created_at)
-       VALUES (?, ?, ?, 'PHP', ?, 'succeeded', ?, NOW())`,
-      [userId, planIdValue, amount, paymentIntentId, paymentMethod || 'card']
+  if (amount !== null && paymentIntentId) {
+    const existingPayment = await query(
+      'SELECT id, status FROM payments WHERE payment_intent_id = ? LIMIT 1',
+      [paymentIntentId]
     );
+
+    let paymentActionResult = null;
+
+    if (!existingPayment.length) {
+      const insertResult = await query(
+        `INSERT INTO payments
+           (user_id, plan_id, amount, currency, payment_intent_id, status, payment_method, created_at)
+         VALUES (?, ?, ?, 'PHP', ?, 'succeeded', ?, NOW())`,
+        [userId, planIdValue, amount, paymentIntentId, paymentMethod || 'card']
+      );
+      paymentActionResult = { action: 'created', id: insertResult?.insertId || null };
+    } else if (existingPayment[0].status !== 'succeeded') {
+      await query(
+        `UPDATE payments
+           SET user_id = ?, plan_id = ?, amount = ?, status = 'succeeded', payment_method = ?, updated_at = NOW()
+         WHERE id = ?`,
+        [userId, planIdValue, amount, paymentMethod || 'card', existingPayment[0].id]
+      );
+      paymentActionResult = { action: 'updated', id: existingPayment[0].id };
+    } else {
+      paymentActionResult = { action: 'unchanged', id: existingPayment[0].id };
+    }
+
+    return {
+      subscription: {
+        id: subscriptionResult.id,
+        action: subscriptionResult.action,
+        status: 'active',
+        currentPeriodStart: now,
+        currentPeriodEnd: endDate,
+      },
+      payment: {
+        id: paymentActionResult?.id || null,
+        action: paymentActionResult?.action || 'unchanged',
+        intentId: paymentIntentId,
+        amount,
+        method: paymentMethod || 'card',
+      },
+    };
   }
+
+  return {
+    subscription: {
+      id: subscriptionResult.id,
+      action: subscriptionResult.action,
+      status: 'active',
+      currentPeriodStart: now,
+      currentPeriodEnd: endDate,
+    },
+    payment: null,
+  };
 }
+

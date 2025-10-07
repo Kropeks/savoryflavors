@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { auth } from '@/auth.config';
 import { query } from './db';
 
 export async function checkUserSubscription(userId) {
@@ -30,7 +29,7 @@ export async function checkUserSubscription(userId) {
 }
 
 export async function getServerSideSubscription(context) {
-  const session = await getServerSession(context.req, context.res, authOptions);
+  const session = await auth();
   if (!session?.user?.id) return { isPremium: false };
   
   return checkUserSubscription(session.user.id);

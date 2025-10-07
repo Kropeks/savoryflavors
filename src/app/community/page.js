@@ -4,6 +4,16 @@ import { useAuthModal } from '@/components/AuthProvider';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { MoreHorizontal, Heart, MessageSquare, Share2, Bookmark } from 'lucide-react';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
 
 // Mock data - replace with actual API calls
 const posts = [
@@ -236,9 +246,72 @@ function CommunityPage() {
               <p>• Give credit when using others' recipes</p>
               <p>• No spam or self-promotion</p>
               <p>• Report any inappropriate content</p>
-              <Link href="/community/guidelines" className="inline-block text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm mt-2">
-                Read full guidelines
-              </Link>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="inline-block text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm mt-2">
+                    Read full guidelines
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+                  <DialogHeader>
+                    <DialogTitle>Community Guidelines</DialogTitle>
+                    <DialogDescription>
+                      Please review these principles to keep SavoryFlavors welcoming for everyone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+                    <section>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-1">1. Respect is non-negotiable</h4>
+                      <p>
+                        Treat every member with kindness. Harassment, hate speech, threats, or discriminatory language will not be tolerated and can result in removal from the community.
+                      </p>
+                    </section>
+                    <section>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-1">2. Share authentic, original work</h4>
+                      <p>
+                        Post recipes, photos, and tips that you created or have permission to share. If you adapt inspiration from elsewhere, credit the source so others can explore it too.
+                      </p>
+                    </section>
+                    <section>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-1">3. Celebrate constructive feedback</h4>
+                      <p>
+                        Support fellow cooks with thoughtful suggestions and encouragement. Critique should be helpful, never hurtful. Remember there is a person behind every post.
+                      </p>
+                    </section>
+                    <section>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-1">4. Keep promotions relevant</h4>
+                      <p>
+                        Occasional mentions of your blog or business are welcome when they add value to the conversation. Repeated self-promotion, affiliate links, or spam will be removed.
+                      </p>
+                    </section>
+                    <section>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-1">5. Protect everyone&rsquo;s safety</h4>
+                      <p>
+                        Avoid sharing sensitive personal information—yours or someone else&rsquo;s. Report suspicious activity, scams, or posts that could put community members at risk.
+                      </p>
+                    </section>
+                    <section>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-1">6. Follow the law</h4>
+                      <p>
+                        Illegal activities, including sharing copyrighted material without permission or encouraging unsafe practices, are strictly prohibited.
+                      </p>
+                    </section>
+                    <section>
+                      <h4 className="font-semibold text-gray-900 dark:text-white mb-1">7. Help us improve</h4>
+                      <p>
+                        Moderators review reports daily but cannot see everything. Use the report button or contact support if you notice content that breaks these guidelines.
+                      </p>
+                    </section>
+                  </div>
+                  <DialogFooter className="justify-end">
+                    <DialogClose asChild>
+                      <button className="rounded-md bg-olive-600 px-4 py-2 text-sm font-semibold text-white hover:bg-olive-700 transition-colors">
+                        I understand
+                      </button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>

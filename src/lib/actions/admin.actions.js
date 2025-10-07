@@ -504,7 +504,7 @@ export async function updateRecipeStatus(recipeId, status, feedback = '') {
 }
 
 // Get subscription data
-export async function getSubscriptions({ page = 1, limit = 10, status = 'active' }) {
+export async function getSubscriptions({ page = 1, limit = 10, status = 'active', search = '' }) {
   const session = await auth();
   
   const userEmail = session?.user?.email?.toLowerCase();
@@ -516,8 +516,111 @@ export async function getSubscriptions({ page = 1, limit = 10, status = 'active'
     throw new Error('Unauthorized');
   }
 
-  // TODO: Implement actual subscription data fetching
-  return [];
+  try {
+    const offset = (page - 1) * limit;
+    const params = [];
+
+    let queryStr = `
+      SELECT
+        s.id,
+        s.status,
+        s.start_date AS startDate,
+        s.end_date AS endDate,
+        s.next_billing_date AS nextBillingDate,
+        s.payment_method AS paymentMethod,
+        s.last_payment_date AS lastPaymentDate,
+        s.created_at AS createdAt,
+        u.id AS userId,
+        u.email,
+        u.name,
+        u.subscription_status AS userSubscriptionStatus,
+        sp.id AS planId,
+        sp.name AS planName,
+        sp.price,
+        sp.billing_cycle AS billingCycle,
+        sp.features
+      FROM subscriptions s
+      JOIN users u ON s.user_id = u.id
+      JOIN subscription_plans sp ON s.plan_id = sp.id
+      WHERE sp.name = 'Premium'
+    `;
+
+    if (status && status !== 'all') {
+      queryStr += ' AND s.status = ?';
+      params.push(status);
+    }
+
+    if (search) {
+      queryStr += ' AND (u.email LIKE ? OR u.name LIKE ?)';
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm);
+    }
+
+    queryStr += ' ORDER BY s.created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const rows = await query(queryStr, params);
+
+    const countParams = [];
+    let countQuery = `
+      SELECT COUNT(*) AS total
+      FROM subscriptions s
+      JOIN users u ON s.user_id = u.id
+      JOIN subscription_plans sp ON s.plan_id = sp.id
+      WHERE sp.name = 'Premium'
+    `;
+
+    if (status && status !== 'all') {
+      countQuery += ' AND s.status = ?';
+      countParams.push(status);
+    }
+
+    if (search) {
+      countQuery += ' AND (u.email LIKE ? OR u.name LIKE ?)';
+      const searchTerm = `%${search}%`;
+      countParams.push(searchTerm, searchTerm);
+    }
+
+    const [countResult] = await query(countQuery, countParams);
+    const total = countResult?.total || 0;
+
+    const subscriptions = rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      nextBillingDate: row.nextBillingDate,
+      paymentMethod: row.paymentMethod,
+      lastPaymentDate: row.lastPaymentDate,
+      createdAt: row.createdAt,
+      plan: {
+        id: row.planId,
+        name: row.planName,
+        price: row.price,
+        billingCycle: row.billingCycle,
+        features: row.features ? JSON.parse(row.features) : [],
+      },
+      customer: {
+        id: row.userId,
+        email: row.email,
+        name: row.name || row.email?.split('@')[0] || 'Unknown User',
+        subscriptionStatus: row.userSubscriptionStatus,
+      },
+    }));
+
+    return {
+      subscriptions,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching premium subscriptions:', error);
+    throw new Error('Failed to fetch premium subscriptions');
+  }
 }
 
 // Update subscription status

@@ -11,14 +11,6 @@ const PAYMONGO_SANDBOX_CARD_ALIASES = {
   '378282246310005': '4000002500003155',
 };
 
-const PAYMONGO_ALLOWED_TEST_CARDS = new Set([
-  '4311518804661120', // Visa 3DS
-  '5200828282828210', // Mastercard 3DS
-  '4000002500003155', // Visa non-3DS
-  '5123450000000008', // Mastercard non-3DS (from PayMongo docs)
-  '4222222222222', // Visa 13-digit legacy test
-]);
-
 export async function POST(req) {
   const session = await auth();
   
@@ -96,6 +88,7 @@ export async function POST(req) {
 
       const normalizedCardNumber = cardDetails.cardNumber.replace(/\D+/g, '');
       const mappedCardNumber = PAYMONGO_SANDBOX_CARD_ALIASES[normalizedCardNumber] || normalizedCardNumber;
+      const sanitizedCardNumber = String(mappedCardNumber).replace(/\D+/g, '');
 
       if (process.env.NODE_ENV !== 'production') {
         console.info('[PayMongo] Card mapping', {
@@ -105,14 +98,24 @@ export async function POST(req) {
           aliasApplied: mappedCardNumber !== normalizedCardNumber,
         });
       }
-      const expMonth = parseInt(cardDetails.expMonth, 10);
-      const expYearRaw = cardDetails.expYear.trim();
-      const expYear = expYearRaw.length === 2 ? parseInt(`20${expYearRaw}`, 10) : parseInt(expYearRaw, 10);
+      const expMonthRaw = String(cardDetails.expMonth ?? '').trim();
+      const expYearRaw = String(cardDetails.expYear ?? '').trim();
+      const expMonthDigits = expMonthRaw.replace(/\D+/g, '');
+      const expYearDigits = expYearRaw.replace(/\D+/g, '');
       const normalizedCvc = cardDetails.cvc.replace(/\D+/g, '');
-      const expMonthString = String(expMonth).padStart(2, '0');
-      const expYearString = String(expYear);
 
-      if (!Number.isInteger(expMonth) || !Number.isInteger(expYear)) {
+      const expMonth = parseInt(expMonthDigits, 10);
+      const expYearForValidation = expYearDigits.length === 2
+        ? 2000 + parseInt(expYearDigits, 10)
+        : parseInt(expYearDigits, 10);
+
+      const expMonthString = expMonthDigits.padStart(2, '0');
+      const expYearString = expYearDigits.length === 2
+        ? `20${expYearDigits}`
+        : expYearDigits.padStart(4, '0');
+      const expYearInt = parseInt(expYearString, 10);
+
+      if (!Number.isInteger(expMonth) || !Number.isInteger(expYearForValidation)) {
         return NextResponse.json(
           { success: false, message: 'Invalid card expiration date.' },
           { status: 400 }
@@ -127,27 +130,16 @@ export async function POST(req) {
       }
 
       const currentYear = new Date().getFullYear();
-      if (expYear < currentYear || expYear > currentYear + 20) {
+      if (expYearForValidation < currentYear || expYearForValidation > currentYear + 20) {
         return NextResponse.json(
           { success: false, message: 'Card expiration year is invalid.' },
           { status: 400 }
         );
       }
 
-      if (!/^[0-9]{12,19}$/.test(mappedCardNumber)) {
+      if (!/^[0-9]{12,19}$/.test(sanitizedCardNumber)) {
         return NextResponse.json(
           { success: false, message: 'Card number must contain 12 to 19 digits.' },
-          { status: 400 }
-        );
-      }
-
-      if (!PAYMONGO_ALLOWED_TEST_CARDS.has(mappedCardNumber)) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              'For testing, please use PayMongo sandbox cards such as 4311 5188 0466 1120 (Visa 3DS), 5200 8282 8282 8210 (Mastercard 3DS), or 4000 0025 0000 3155 (Visa non-3DS).',
-          },
           { status: 400 }
         );
       }
@@ -220,9 +212,9 @@ export async function POST(req) {
             attributes: {
               type: 'card',
               details: {
-                card_number: String(mappedCardNumber),
-                exp_month: expMonthString,
-                exp_year: expYearString,
+                card_number: sanitizedCardNumber,
+                exp_month: expMonth,
+                exp_year: expYearInt,
                 cvc: normalizedCvc,
               },
               billing: cardDetails.billing ? cardDetails.billing : undefined,
@@ -256,6 +248,8 @@ export async function POST(req) {
       const cardPaymentMethodId = cardPaymentMethodData.data.id;
 
       // Attach card payment method to intent
+      const successReturnUrl = `${process.env.NEXTAUTH_URL}/subscription/success?${new URLSearchParams({ payment_intent_id: paymentIntentId }).toString()}`;
+
       const cardAttachResponse = await fetch(`https://api.paymongo.com/v1/payment_intents/${paymentIntentId}/attach`, {
         method: 'POST',
         headers: {
@@ -266,7 +260,7 @@ export async function POST(req) {
           data: {
             attributes: {
               payment_method: cardPaymentMethodId,
-              return_url: `${process.env.NEXTAUTH_URL}/subscription/success`,
+              return_url: successReturnUrl,
             },
           },
         }),
@@ -401,6 +395,8 @@ export async function POST(req) {
       }
 
       // Attach payment method to payment intent
+      const successReturnUrl = `${process.env.NEXTAUTH_URL}/subscription/success?${new URLSearchParams({ payment_intent_id: paymentIntentData.data.id }).toString()}`;
+
       const attachResponse = await fetch(`https://api.paymongo.com/v1/payment_intents/${paymentIntentData.data.id}/attach`, {
         method: 'POST',
         headers: {
@@ -411,7 +407,7 @@ export async function POST(req) {
           data: {
             attributes: {
               payment_method: paymentMethodData.data.id,
-              return_url: `${process.env.NEXTAUTH_URL}/subscription/success`,
+              return_url: successReturnUrl,
             }
           }
         })

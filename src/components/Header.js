@@ -28,6 +28,7 @@ export default function Header() {
   const [gameScore, setGameScore] = useState(0);
   const [gameMode, setGameMode] = useState(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const userMenuRef = useRef(null);
   const router = useRouter();
   const userEmail = session?.user?.email?.toLowerCase();
@@ -96,11 +97,53 @@ export default function Header() {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
+  // Check subscription status for premium access
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchSubscription = async () => {
+      try {
+        const response = await fetch('/api/user/subscription', { cache: 'no-store' });
+        if (!response.ok) {
+          if (isMounted) {
+            setHasPremiumAccess(isPremiumUser);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        const activeSubscription =
+          data?.status === 'active' ||
+          data?.hasSubscription === true ||
+          data?.plan?.name?.toLowerCase().includes('premium');
+
+        if (isMounted) {
+          setHasPremiumAccess(activeSubscription || isPremiumUser);
+        }
+      } catch (error) {
+        console.error('Subscription fetch error:', error);
+        if (isMounted) {
+          setHasPremiumAccess(isPremiumUser);
+        }
+      }
+    };
+
+    if (status === 'authenticated') {
+      fetchSubscription();
+    } else if (isMounted) {
+      setHasPremiumAccess(false);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [status, isPremiumUser]);
+
   // Handle FitSavory click
   const handleFitSavoryClick = (e) => {
     e.preventDefault();
     if (status === 'authenticated') {
-      if (isPremiumUser) {
+      if (hasPremiumAccess || isPremiumUser) {
         router.push('/fitsavory');
       } else {
         setShowPricingModal(true);
@@ -427,7 +470,7 @@ export default function Header() {
                     e.preventDefault();
                     closeMobileMenu();
                     if (status === 'authenticated') {
-                      if (isPremiumUser) {
+                      if (hasPremiumAccess || isPremiumUser) {
                         router.push('/fitsavory');
                       } else {
                         setShowPricingModal(true);
